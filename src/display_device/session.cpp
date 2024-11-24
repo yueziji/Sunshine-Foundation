@@ -190,7 +190,10 @@ namespace display_device {
           BOOST_LOG(warning) << "Applying display settings will fail - retrying later...";
           return false;
         }
-        config_copy = make_parsed_config(config, session, is_reconfigure, true)
+        auto new_config_optional = make_parsed_config(config, session, is_reconfigure, true);
+        if (new_config_optional) {
+            config_copy = *new_config_optional;
+        }
         const auto result { settings.apply_config(config_copy) };
         if (!result) {
           BOOST_LOG(warning) << "Failed to apply display settings - will stop trying, but will allow stream to continue.";
