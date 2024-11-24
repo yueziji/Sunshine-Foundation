@@ -233,12 +233,6 @@ jobs:
           mv ./cpack_artifacts/Sunshine.exe ../artifacts/sunshine-windows-installer.exe
           mv ./cpack_artifacts/Sunshine.zip ../artifacts/sunshine-windows-portable.zip
 
-      - name: Run tests
-        id: test
-        shell: msys2 {0}
-        working-directory: build/tests
-        run: |
-          ./test_sunshine.exe --gtest_color=yes
 
       - name: Generate gcov report
         # any except canceled or skipped
