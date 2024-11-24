@@ -175,7 +175,7 @@ namespace display_device {
     }
 
     if (settings.is_changing_settings_going_to_fail()) {
-      timer->setup_timer([this, config_copy = *parsed_config]() {
+      timer->setup_timer([this, &config, &session, &is_reconfigure, config_copy = *parsed_config]() {
         while (true) {
           {
             std::lock_guard<std::mutex> lock(config_mutex);
