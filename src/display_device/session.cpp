@@ -168,7 +168,7 @@ namespace display_device {
   session_t::configure_display(const config::video_t &config, const rtsp_stream::launch_session_t &session, bool is_reconfigure) {
     std::lock_guard lock { mutex };
 
-    const auto parsed_config { make_parsed_config(config, session, is_reconfigure) };
+    const auto parsed_config { make_parsed_config(config, session, is_reconfigure, false) };
     if (!parsed_config) {
       BOOST_LOG(error) << "Failed to parse configuration for the the display device settings!";
       return;
@@ -190,7 +190,7 @@ namespace display_device {
           BOOST_LOG(warning) << "Applying display settings will fail - retrying later...";
           return false;
         }
-
+        config_copy = make_parsed_config(config, session, is_reconfigure, true)
         const auto result { settings.apply_config(config_copy) };
         if (!result) {
           BOOST_LOG(warning) << "Failed to apply display settings - will stop trying, but will allow stream to continue.";
