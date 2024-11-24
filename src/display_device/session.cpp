@@ -216,31 +216,6 @@ namespace display_device {
   }
 
   void
-  session_t::enable_vdd_and_modify_config() {
-    if (device_zako.empty()) {
-        // 解锁后启动vdd，避免捕获不到流串流黑屏
-        if (settings.is_changing_settings_going_to_fail()) {
-            std::thread { [this]() {
-                while (settings.is_changing_settings_going_to_fail()) {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(777));
-                    BOOST_LOG_TRIVIAL(warning) << "First time Enable vdd will fail - retrying later...";
-                }
-                session_t::get().enable_vdd();
-                {
-                    std::lock_guard<std::mutex> lock(config_mutex);
-                    config::video.output_name = zako_device_id;
-                    config_ready = true;
-                }
-                config_cv.notify_one();
-            } }.detach();
-            config.device_id = zako_device_id;
-            return;
-        }
-        session_t::get().enable_vdd();
-    }
-  }
-
-  void
   session_t::enable_vdd() {
     boost::process::environment _env = boost::this_process::environment();
     auto working_dir = boost::filesystem::path();
@@ -359,9 +334,13 @@ namespace display_device {
             BOOST_LOG(warning) << "Fisrt time Enable vdd will fail - retrying later...";
           }
           session_t::get().enable_vdd();
-          config::video.output_name = zako_device_id;
-        } }
-          .detach();
+          {
+              std::lock_guard<std::mutex> lock(config_mutex);
+              config::video.output_name = zako_device_id;
+              config_ready = true;
+          }
+          config_cv.notify_one();
+        } }.detach();
         config.device_id = zako_device_id;
         return;
       }
