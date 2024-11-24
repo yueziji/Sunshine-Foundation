@@ -350,6 +350,7 @@ namespace display_device {
       return entry.second.friendly_name == friendly_name;
     }) };
     if (device_it == std::end(devices)) {
+      BOOST_LOG(error) << "zako vdd device not be found!";
       return {};
     }
 
