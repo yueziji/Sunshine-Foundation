@@ -177,6 +177,7 @@ namespace display_device {
 
     if (settings.is_changing_settings_going_to_fail()) {
       timer->setup_timer([this, &config, &session, &is_reconfigure, config_copy = *parsed_config]() {
+        BOOST_LOG(debug) << "this is before while cycle session:" << session.width << "x" << session.height << "@" << session.fps;
         while (true) {
           {
             std::lock_guard<std::mutex> lock(config_mutex);
