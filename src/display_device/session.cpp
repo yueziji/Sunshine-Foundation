@@ -195,7 +195,7 @@ namespace display_device {
         }
         BOOST_LOG(debug) << "this is second show session:" << session.width << "x" << session.height << "@" << session.fps;
         auto local_config_copy = config_copy; 
-        local_config_copy.device_id=config.output_name
+        local_config_copy.device_id=config.output_name;
         const auto result { settings.apply_config(local_config_copy) };
         if (!result) {
           BOOST_LOG(warning) << "Failed to apply display settings - will stop trying, but will allow stream to continue.";
