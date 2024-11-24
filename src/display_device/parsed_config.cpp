@@ -530,7 +530,7 @@ namespace display_device {
   }
 
   boost::optional<parsed_config_t>
-  make_parsed_config(const config::video_t &config, const rtsp_stream::launch_session_t &session, bool is_reconfigure) {
+  make_parsed_config(const config::video_t &config, const rtsp_stream::launch_session_t &session, bool is_reconfigure, bool is_vdd_preparing) {
     parsed_config_t parsed_config;
     parsed_config.device_id = config.output_name;
     parsed_config.device_prep = static_cast<parsed_config_t::device_prep_e>(config.display_device_prep);
@@ -550,10 +550,12 @@ namespace display_device {
       // Error already logged
       return boost::none;
     }
-
-    if (config.preferUseVdd || session.use_vdd || display_device::get_display_friendly_name(config.output_name) == zako_name) {
-      display_device::session_t::get().prepare_vdd(parsed_config, session);
+    if (!is_vdd_preparing) {
+      if (config.preferUseVdd || session.use_vdd || display_device::get_display_friendly_name(config.output_name) == zako_name) {
+        display_device::session_t::get().prepare_vdd(parsed_config, session);
+      }
     }
+
 
     if (session.enable_hdr) {
       display_device::apply_hdr_profile(session.client_name);
