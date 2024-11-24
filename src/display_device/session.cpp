@@ -333,12 +333,14 @@ namespace display_device {
             std::this_thread::sleep_for(777ms);
             BOOST_LOG(warning) << "Fisrt time Enable vdd will fail - retrying later...";
           }
-          BOOST_LOG(debug) << "尝试启动vdd";
+          BOOST_LOG(debug) << "try start vdd";
           session_t::get().enable_vdd();
+          std::this_thread::sleep_for(std::chrono::seconds(1));
           {
               std::lock_guard<std::mutex> lock(config_mutex);
-              BOOST_LOG(debug) << "更新deviceid: " << zako_device_id;
-              config::video.output_name = zako_device_id;
+              const auto newzakoid { display_device::find_device_by_friendlyname(zako_name) };
+              BOOST_LOG(debug) << "update deviceid: " << newzakoid;
+              config::video.output_name = newzakoid;
               config_ready = true;
           }
           config_cv.notify_one();
