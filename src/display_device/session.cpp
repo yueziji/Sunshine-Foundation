@@ -173,6 +173,7 @@ namespace display_device {
       BOOST_LOG(error) << "Failed to parse configuration for the the display device settings!";
       return;
     }
+    BOOST_LOG(debug) << "this is first show session:" << session.width << "x" << session.height << "@" << session.fps;
 
     if (settings.is_changing_settings_going_to_fail()) {
       timer->setup_timer([this, &config, &session, &is_reconfigure, config_copy = *parsed_config]() {
@@ -190,7 +191,7 @@ namespace display_device {
           BOOST_LOG(warning) << "Applying display settings will fail - retrying later...";
           return false;
         }
-        BOOST_LOG(debug) << "this is session:" << session.width << "x" << session.height << "@" << session.fps;
+        BOOST_LOG(debug) << "this is second show session:" << session.width << "x" << session.height << "@" << session.fps;
         
         const auto updated_parsed_config { make_parsed_config(config, session, is_reconfigure, true) };
         const auto result { settings.apply_config(*updated_parsed_config) };
