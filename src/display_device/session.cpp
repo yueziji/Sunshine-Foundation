@@ -176,6 +176,7 @@ namespace display_device {
     BOOST_LOG(debug) << "this is first show session:" << session.width << "x" << session.height << "@" << session.fps;
 
     if (settings.is_changing_settings_going_to_fail()) {
+      BOOST_LOG(debug) << "this is before timer session:" << session.width << "x" << session.height << "@" << session.fps;
       timer->setup_timer([this, &config, &session, &is_reconfigure, config_copy = *parsed_config]() {
         BOOST_LOG(debug) << "this is before while cycle session:" << session.width << "x" << session.height << "@" << session.fps;
         while (true) {
