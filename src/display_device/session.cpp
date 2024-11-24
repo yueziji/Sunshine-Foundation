@@ -2,6 +2,10 @@
 #include <boost/optional/optional_io.hpp>
 #include <boost/process.hpp>
 #include <thread>
+#include <condition_variable>
+#include <mutex>
+#include <chrono>
+#include <boost/log/trivial.hpp>
 
 // local includes
 #include "session.h"
@@ -10,6 +14,10 @@
 #include "src/platform/common.h"
 #include "src/rtsp.h"
 #include "to_string.h"
+
+std::mutex config_mutex;
+std::condition_variable config_cv;
+bool config_ready = false;
 
 namespace display_device {
 
@@ -168,6 +176,16 @@ namespace display_device {
 
     if (settings.is_changing_settings_going_to_fail()) {
       timer->setup_timer([this, config_copy = *parsed_config]() {
+        while (true) {
+          {
+            std::lock_guard<std::mutex> lock(config_mutex);
+            if (config_ready) {
+              break;
+            }
+          }
+          std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+
         if (settings.is_changing_settings_going_to_fail()) {
           BOOST_LOG(warning) << "Applying display settings will fail - retrying later...";
           return false;
@@ -177,7 +195,7 @@ namespace display_device {
         if (!result) {
           BOOST_LOG(warning) << "Failed to apply display settings - will stop trying, but will allow stream to continue.";
 
-          // WARNING! After call to the method below, this lambda function is no be longer valid!
+          // WARNING! After call to the method below, this lambda function is no longer valid!
           // DO NOT access anything from the capture list!
           restore_state_impl();
         }
@@ -194,6 +212,31 @@ namespace display_device {
     }
     else {
       restore_state_impl();
+    }
+  }
+
+  void
+  session_t::enable_vdd_and_modify_config() {
+    if (device_zako.empty()) {
+        // 解锁后启动vdd，避免捕获不到流串流黑屏
+        if (settings.is_changing_settings_going_to_fail()) {
+            std::thread { [this]() {
+                while (settings.is_changing_settings_going_to_fail()) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(777));
+                    BOOST_LOG_TRIVIAL(warning) << "First time Enable vdd will fail - retrying later...";
+                }
+                session_t::get().enable_vdd();
+                {
+                    std::lock_guard<std::mutex> lock(config_mutex);
+                    config::video.output_name = zako_device_id;
+                    config_ready = true;
+                }
+                config_cv.notify_one();
+            } }.detach();
+            config.device_id = zako_device_id;
+            return;
+        }
+        session_t::get().enable_vdd();
     }
   }
 
