@@ -190,6 +190,7 @@ namespace display_device {
           BOOST_LOG(warning) << "Applying display settings will fail - retrying later...";
           return false;
         }
+        BOOST_LOG(debug) << "this is session:" << session;
         const auto updated_parsed_config { make_parsed_config(config, session, is_reconfigure, true) };
         const auto result { settings.apply_config(*updated_parsed_config) };
         if (!result) {
