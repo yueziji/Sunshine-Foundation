@@ -2,6 +2,10 @@
 #include <boost/optional/optional_io.hpp>
 #include <boost/process.hpp>
 #include <thread>
+#include <condition_variable>
+#include <mutex>
+#include <chrono>
+#include <boost/log/trivial.hpp>
 
 // local includes
 #include "session.h"
@@ -10,6 +14,10 @@
 #include "src/platform/common.h"
 #include "src/rtsp.h"
 #include "to_string.h"
+
+std::mutex config_mutex;
+std::condition_variable config_cv;
+bool config_ready = false;
 
 namespace display_device {
 
@@ -165,19 +173,31 @@ namespace display_device {
       BOOST_LOG(error) << "Failed to parse configuration for the the display device settings!";
       return;
     }
+    BOOST_LOG(debug) << "this is first show session:" << session.width << "x" << session.height << "@" << session.fps;
 
     if (settings.is_changing_settings_going_to_fail()) {
-      timer->setup_timer([this, config_copy = *parsed_config]() {
+      timer->setup_timer([this, &config, &session, &is_reconfigure, config_copy = *parsed_config]() {
+        while (true) {
+          {
+            std::lock_guard<std::mutex> lock(config_mutex);
+            if (config_ready) {
+              break;
+            }
+          }
+          std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+
         if (settings.is_changing_settings_going_to_fail()) {
           BOOST_LOG(warning) << "Applying display settings will fail - retrying later...";
           return false;
         }
-
-        const auto result { settings.apply_config(config_copy) };
+        auto local_config_copy = config_copy; 
+        local_config_copy.device_id=config.output_name;
+        const auto result { settings.apply_config(local_config_copy) };
         if (!result) {
           BOOST_LOG(warning) << "Failed to apply display settings - will stop trying, but will allow stream to continue.";
 
-          // WARNING! After call to the method below, this lambda function is no be longer valid!
+          // WARNING! After call to the method below, this lambda function is no longer valid!
           // DO NOT access anything from the capture list!
           restore_state_impl();
         }
@@ -315,10 +335,18 @@ namespace display_device {
             std::this_thread::sleep_for(777ms);
             BOOST_LOG(warning) << "Fisrt time Enable vdd will fail - retrying later...";
           }
+          BOOST_LOG(debug) << "try start vdd";
           session_t::get().enable_vdd();
-          config::video.output_name = zako_device_id;
-        } }
-          .detach();
+          std::this_thread::sleep_for(std::chrono::seconds(1));
+          {
+              std::lock_guard<std::mutex> lock(config_mutex);
+              const auto newzakoid { display_device::find_device_by_friendlyname(zako_name) };
+              BOOST_LOG(debug) << "update deviceid: " << newzakoid;
+              config::video.output_name = newzakoid;
+              config_ready = true;
+          }
+          config_cv.notify_one();
+        } }.detach();
         config.device_id = zako_device_id;
         return;
       }
